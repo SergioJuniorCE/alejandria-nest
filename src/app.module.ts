@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { AccessTokenGuard } from './auth/common/guards';
 import { PrismaModule } from './prisma/prisma.module';
 import { UniversitiesModule } from './universities/universities.module';
+import { CareersModule } from './careers/careers.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UniversitiesModule } from './universities/universities.module';
     AuthModule,
     PrismaModule,
     UniversitiesModule,
+    CareersModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AccessTokenGuard }],
 })
