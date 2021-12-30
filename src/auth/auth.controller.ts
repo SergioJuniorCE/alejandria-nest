@@ -9,7 +9,7 @@ import {
 import { AuthService } from './auth.service';
 import { GetCurrentUser, GetCurrentUserId, Public } from './common/decorators';
 import { RefreshTokenGuard } from './common/guards';
-import { AuthDto } from './dto';
+import { RegisterDto, LoginDto } from './dto';
 import { Tokens } from './types';
 
 @Controller('auth')
@@ -19,14 +19,14 @@ export class AuthController {
   @Public()
   @Post('local/register')
   @HttpCode(HttpStatus.CREATED)
-  async registerLocal(@Body() dto: AuthDto): Promise<Tokens> {
+  async registerLocal(@Body() dto: RegisterDto): Promise<Tokens> {
     return this.authService.registerLocal(dto);
   }
 
   @Public()
   @Post('local/login')
   @HttpCode(HttpStatus.OK)
-  async loginLocal(@Body() dto: AuthDto): Promise<Tokens> {
+  async loginLocal(@Body() dto: LoginDto): Promise<Tokens> {
     return this.authService.loginLocal(dto);
   }
 

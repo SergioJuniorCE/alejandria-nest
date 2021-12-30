@@ -10,7 +10,7 @@ export class PrismaService
     super({
       datasources: {
         db: {
-          url: 'mysql://root:admin@localhost:3306/alejandria?schema=public',
+          url: process.env.DATABASE_URL,
         },
       },
     });

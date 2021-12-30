@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { AuthDto } from './dto';
+import { RegisterDto, LoginDto } from './dto';
 import { Tokens } from './types/tokens.type';
 import { JwtService } from '@nestjs/jwt';
 
@@ -9,12 +9,26 @@ import { JwtService } from '@nestjs/jwt';
 export class AuthService {
   constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
-  async registerLocal(dto: AuthDto): Promise<Tokens> {
+  /**
+   * Registers a new user with the given email and password.
+   * @param dto User information.
+   * @returns User tokens.
+   */
+  async registerLocal(dto: RegisterDto): Promise<Tokens> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (user) {
+      throw new ForbiddenException('User already exists');
+    }
     const hash = await this.hashData(dto.password);
     const newUser = await this.prisma.user.create({
       data: {
         email: dto.email,
         hash,
+        name: dto.name,
+        country: dto.country,
       },
     });
     const tokens = await this.getTokens(newUser.id, newUser.email);
@@ -22,7 +36,12 @@ export class AuthService {
     return tokens;
   }
 
-  async loginLocal(dto: AuthDto): Promise<Tokens> {
+  /**
+   * Logins a user with the given email and password.
+   * @param dto User information.
+   * @returns User tokens.
+   */
+  async loginLocal(dto: LoginDto): Promise<Tokens> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -41,6 +60,10 @@ export class AuthService {
     return tokens;
   }
 
+  /**
+   * Logs out a user with the given ID.
+   * @param userId User ID.
+   */
   async logout(userId: number) {
     console.log('userId', userId);
     await this.prisma.user.update({
@@ -51,20 +74,34 @@ export class AuthService {
     });
   }
 
-  async refresh(userId: number, rt: string) {
+  /**
+   * Refreshes the tokens of a user with the given refresh token and ID.
+   * @param userId User ID.
+   * @param rt Refresh token.
+   * @returns User tokens.
+   */
+  async refresh(userId: number, rt: string): Promise<Tokens> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
     if (!user || !user.hashedRt)
       throw new ForbiddenException('Invalid credentials');
     const rtMatches = await bcrypt.compare(rt, user.hashedRt);
-    if (!rtMatches) throw new ForbiddenException('Invalid credentials');
+
+    if (!rtMatches) {
+      throw new ForbiddenException('Invalid credentials');
+    }
 
     const tokens = await this.getTokens(user.id, user.email);
     this.updateRtHash(user.id, tokens.refresh_token);
     return tokens;
   }
 
+  /**
+   * Returns the user information with a given ID.
+   * @param userId User ID.
+   * @returns User information.
+   */
   async me(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -75,10 +112,6 @@ export class AuthService {
     delete user.updatedAt;
     delete user.id;
     return user;
-  }
-
-  hashData(hash: string) {
-    return bcrypt.hash(hash, 10);
   }
 
   async getTokens(userId: number, email: string): Promise<Tokens> {
@@ -118,5 +151,9 @@ export class AuthService {
       where: { id: userId },
       data: { hashedRt: hash },
     });
+  }
+
+  hashData(hash: string) {
+    return bcrypt.hash(hash, 10);
   }
 }
